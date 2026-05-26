@@ -79,73 +79,64 @@ router.get('/api/test', (req, res) => {
 
 
 router.post("/signup", async (req, res) => {
-    console.log(req.body);
-    console.log("hellooo");
     try {
         db.checkUsernameEmail(
             [req.body.username, req.body.email],
             async (err, result) => {
                 if (err) {
-                    res.status(500).send("Error Check Details!");
+                    return res.status(500).send("Error Check Details!");
                 }
                 if (result[0] != null) {
-                    res.status(500).send("Username or email already taken!");
-                } else {
-                    const hashedPassword = await bcrypt.hash(
-                        req.body.password,
-                        16
-                    );
-                    let id = uuidv1();
-                    let values = [
-                        id, // UserID
-                        req.body.username,
-                        req.body.firstname,
-                        req.body.surname,
-                        req.body.email,
-                        hashedPassword,
-                        0, // Elevation (default 0)
-                        15, // Group
-                        "/uploads/1679312777040-defaultPfp.png.jpg", // PFP
-                        "", // Will be overwritten in function (date)
-                        1, // Online
-                        "", // Will be overwritten in function (date)
-                        "", // Bio
-                        0, //xp
-                        1, // Private
-                    ];
-                    db.addNewUser(values, async (error, result) => {
-                        console.log("Here");
-                        if (error) {
-                            console.log(error);
-                            res.status(500).send("Error Check Details!");
-                        } else {
-                            console.log("User " + req.body.username + " has been registered.");
-                            let tokens = jwtTokens.jwtTokens(id, req.body.username, req.body.email);
+                    return res.status(500).send("Username or email already taken!");
+                }
+                const hashedPassword = await bcrypt.hash(
+                    req.body.password,
+                    16
+                );
+                let id = uuidv1();
+                let values = [
+                    id, // UserID
+                    req.body.username,
+                    req.body.firstname,
+                    req.body.surname,
+                    req.body.email,
+                    hashedPassword,
+                    0, // Elevation (default 0)
+                    15, // Group
+                    "/uploads/1679312777040-defaultPfp.png.jpg", // PFP
+                    "", // Will be overwritten in function (date)
+                    1, // Online
+                    "", // Will be overwritten in function (date)
+                    "", // Bio
+                    0, //xp
+                    1, // Private
+                ];
+                db.addNewUser(values, async (error, result) => {
+                    if (error) {
+                        console.error("signup addNewUser failed:", error.code || error.message);
+                        return res.status(500).send("Error Check Details!");
+                    }
+                    let tokens = jwtTokens.jwtTokens(id, req.body.username, req.body.email);
 
-                            // Check if result is not empty and has at least one object
-                            if (result && result.length > 0) {
-                                delete result[0].password; // Ensure there's no accidental password exposure
-                                tokens.user = result[0];
-                            } else {
-                                // Handle the case where no user data is returned
-                                tokens.user = { id: id, username: req.body.username, email: req.body.email };
-                            }
+                    if (result && result.length > 0) {
+                        delete result[0].password;
+                        tokens.user = result[0];
+                    } else {
+                        tokens.user = { id: id, username: req.body.username, email: req.body.email };
+                    }
 
-                            res.cookie("refresh_token", tokens.refreshToken, { httpOnly: true });
-                            res.json(tokens); // Send back access token and refresh token
-                        }
-                    });
-
-                } //end else
+                    res.cookie("refresh_token", tokens.refreshToken, { httpOnly: true });
+                    res.json(tokens);
+                });
             }
         );
     } catch (err) {
-        res.send("FAILURE");
+        console.error("signup failed:", err.message);
+        res.status(500).send("FAILURE");
     }
-}); //end post
+});
 
 router.post("/login", async (req, res) => {
-    console.log("whatever");
     try {
         const { username, password } = req.body;
 
@@ -256,7 +247,6 @@ router.post("/paginatedpuzzle", (req, res) => {
             req.body.puzzletype,
             (callback) => {
                 if (callback == null) {
-                    console.log("paginatedpuzzles CALLBACK NULL 1");
                     res.status(500).send(new Error("FAILURE"));
                 } else {
                     db.formatPuzzleJSON(callback[0], (result) => {
@@ -277,7 +267,6 @@ router.post("/paginatedpuzzle", (req, res) => {
             req.body.mode,
             (callback) => {
                 if (callback == null) {
-                    console.log("paginatedpuzzles CALLBACK NULL 2");
                     res.status(500).send(new Error("FAILURE"));
                 } else {
                     db.formatPuzzleJSON(callback[0], (result) => {
@@ -298,7 +287,6 @@ router.post("/paginatedpuzzle", (req, res) => {
             req.body.mode,
             (callback) => {
                 if (callback == null) {
-                    console.log("paginatedpuzzles CALLBACK NULL 3");
                     res.status(500).send(new Error("FAILURE"));
                 } else {
                     db.formatPuzzleJSON(callback[0], (result) => {
@@ -319,7 +307,6 @@ router.post("/paginatedpuzzle", (req, res) => {
             req.body.mode,
             (callback) => {
                 if (callback == null) {
-                    console.log("paginatedpuzzles CALLBACK NULL 4");
                     res.status(500).send(new Error("FAILURE"));
                 } else {
                     db.formatPuzzleJSON(callback[0], (result) => {
@@ -340,7 +327,6 @@ router.post("/paginatedpuzzle", (req, res) => {
             req.body.mode,
             (callback) => {
                 if (callback == null) {
-                    console.log("paginatedpuzzles CALLBACK NULL 4");
                     res.status(500).send(new Error("FAILURE"));
                 } else {
                     db.formatPuzzleJSON(callback[0], (result) => {
@@ -350,7 +336,6 @@ router.post("/paginatedpuzzle", (req, res) => {
                 }
             }
         );
-        console.log("done");
     }
 });
 
@@ -361,7 +346,6 @@ router.post("/puzzleprogress", authorization.authenticateToken, (req, res) => {
     let userid = parseJwt(req.body.accessToken).userid;
 
     db.resumeOrNew([userid, req.body.puzzleid], (callback) => {
-        console.log(callback[1]);
         if (callback[1] === null) {
             res.status(500).send(new Error("FAILURE"));
         } else {
@@ -620,26 +604,18 @@ router.post("/submitPuzzle", authorization.authenticateToken, (req, res) => {
                 // the level is for the level calculated
                 db.updateXP([userid, data.puzzleid], (callback) => {
                     if (!callback[0]) {
-                        console.log(callback[0]);
-
                         res.status(400).send("User not found");
                     } else {
                         res.status(200).json(callback[0]);
                     }
                 });
-
-                console.log("puzzle submitted");
-            } else {
-                console.log("solution not saved");
             }
         });
     } else {
         db.submitSolution([userid, data.puzzleid], (callback) => {
             if (callback[0]) {
-                console.log("submitted the puzzle");
                 res.status(200).send(callback[0]);
             } else {
-                console.log("puzzle submission failed");
                 res.status(400).send(callback[0]);
             }
         });
@@ -651,16 +627,8 @@ router.post("/solvedBefore", (req, res) => {
     let data = req.body;
     let userid = parseJwt(req.body.accessToken).userid;
 
-    // if the puzzle has been solve before, send false
-    // if not, send true
     db.solvedBefore([userid, data.puzzleid], (callback) => {
-        if (callback[0] == false) {
-            console.log(callback[0]);
-            res.status(200).send(callback[0]);
-        } else {
-            console.log(callback[0]);
-            res.status(200).send(callback[0]);
-        }
+        res.status(200).send(callback[0]);
     });
 });
 
@@ -673,17 +641,11 @@ router.post("/solvepuzzle", (req, res) => {
         res.status(500).send(new Error("SOLUTION NOT FOUND"));
     } else {
         res.status(200).json(board);
-        console.log("puzzle solver returned a solution");
     }
 });
 
-
-
-
 fs.chmodSync("./uploads", '0755');
 
-const stats = fs.statSync("./uploads");
-console.log(`Uploads directory permissions: ${stats.mode.toString(8)}`);
 /*
     AI generated functions
 */
@@ -702,8 +664,6 @@ router.post("/changePfp", authorization.authenticateToken, (req, res) => {
 
     let values = [data.url, data.userid];
 
-    console.log(values);
-
     db.addPfp(values, (callback) => {
         if (callback === null) {
             res.status(500).send(new Error("FAILURE"));
@@ -714,10 +674,6 @@ router.post("/changePfp", authorization.authenticateToken, (req, res) => {
 });
 
 router.post("/upload", upload.single("image"), async function (req, res) {
-    console.log("Received image upload");
-    console.log(`Upload directory: ${"/uploads"}`);
-    console.log(`File path: ${req.file ? req.file.path : 'No file'}`);
-
     if (!req.file) {
         return res.status(400).send("No file uploaded");
     }
@@ -726,24 +682,20 @@ router.post("/upload", upload.single("image"), async function (req, res) {
     const outputFilename = path.parse(file.filename).name + '.jpg';
     const outputPath = path.join("uploads", outputFilename);
 
+    // The previous version threw inside .toBuffer's callback — that error
+    // escaped the surrounding try/catch and could crash the process.
     try {
-        await sharp(file.path)
+        const buffer = await sharp(file.path)
             .flatten({ background: { r: 255, g: 255, b: 255 } })
             .jpeg()
-            .toBuffer((err, buffer) => {
-                if (err) throw err;
-                fs.writeFileSync(outputPath, buffer);
+            .toBuffer();
 
-                // Remove the original file
-                fs.unlinkSync(file.path);
+        fs.writeFileSync(outputPath, buffer);
+        fs.unlinkSync(file.path);
 
-                const url = "/uploads/" + outputFilename;
-
-                console.log(url);
-                res.status(200).send({ url: url });
-            });
+        res.status(200).send({ url: "/uploads/" + outputFilename });
     } catch (err) {
-        console.error(err);
+        console.error("upload sharp failed:", err.message);
         res.status(500).send("Error processing image");
     }
 });
@@ -758,7 +710,6 @@ router.post("/generateRandomSudoku", (req, res) => {
         res.status(500).send(new Error("SOLUTION NOT FOUND"));
     } else {
         res.status(200).json(board);
-        console.log("puzzle generator returned a solution");
     }
 
 });

@@ -8,6 +8,15 @@ const app = require("../app");
 const debug = require("debug")("puzzleflix-server:server");
 const http = require("http");
 
+// Catch escaped errors so a single bad request can't terminate the process.
+// Without these, Node exits on the first unhandled rejection (Node >= 15).
+process.on("unhandledRejection", (reason) => {
+    console.error("unhandledRejection:", reason && reason.message ? reason.message : reason);
+});
+process.on("uncaughtException", (error) => {
+    console.error("uncaughtException:", error && error.message ? error.message : error);
+});
+
 /**
  * Normalize a port into a number, string, or false.
  */

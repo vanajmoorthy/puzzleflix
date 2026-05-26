@@ -55,9 +55,7 @@ if (environment == "LOCAL") {
 //-----------------------------------------------------------
 
 router.get("/getBoard", async (req, res) => {
-    console.log("GETBOARD");
     db.resumeOrNewQueens(req.query.uid, function (callback) {
-        console.log(callback[1]);
         res.json(callback[1].progress);
     });
 });
