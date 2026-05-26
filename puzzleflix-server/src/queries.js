@@ -1,42 +1,37 @@
 const mysql = require("mysql");
-const environment = process.env.APP_ENVIRONMENT;
-console.log(environment);
-
-// Connect to db
 
 const pool = mysql.createConnection({
     connectionLimit: 10,
     user: "cs3099user15",
     host: "68.183.38.239",
-    database: "cs3099user15_PuzzleFlix", // public database
-    password: "y!pqA34S8sgEJy", // key to our school server's mariaDB 
+    database: "cs3099user15_PuzzleFlix",
+    password: "y!pqA34S8sgEJy",
     port: 3306,
     waitForConnections: true,
-    timeout: 60000 // 60 seconds
+    timeout: 60000
 });
 
+// Any fatal error on the connection used to `throw`, which crashed the
+// process. Log instead, and reconnect when the error is fatal/connection-level.
 function handleDisconnect(conn) {
     conn.on('error', function (error) {
-        if (error.code === 'PROTOCOL_CONNECTION_LOST' || error.code === 'ECONNRESET') {
-            console.error('Database connection was closed.');
+        console.error('Database connection error:', error.code || error.message);
+        if (error.fatal || error.code === 'PROTOCOL_CONNECTION_LOST' || error.code === 'ECONNRESET') {
             reconnect(conn);
-        } else {
-            throw error;
         }
     });
 }
 
 function reconnect(conn) {
-    console.log('Reconnecting to database...');
-    // Create a new connection
-    conn = mysql.createConnection(conn.config);
-    handleDisconnect(conn);
-    conn.connect(function (error) {
+    console.error('Reconnecting to database...');
+    const fresh = mysql.createConnection(conn.config);
+    handleDisconnect(fresh);
+    fresh.connect(function (error) {
         if (error) {
-            console.error('Error when reconnecting to the database:', error);
-            setTimeout(reconnect, 2000, conn);
+            console.error('Error when reconnecting:', error.code || error.message);
+            setTimeout(reconnect, 2000, fresh);
         } else {
-            console.log('Successfully reconnected to the database.');
+            console.error('Reconnected to the database.');
         }
     });
 }
@@ -45,9 +40,8 @@ handleDisconnect(pool);
 
 pool.connect(error => {
     if (error) {
-        console.error('Error connecting to the database:', error);
-    } else {
-        console.log('Connected to the database.');
+        console.error('Error connecting to the database:', error.code || error.message);
     }
 });
+
 module.exports = pool;
