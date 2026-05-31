@@ -1,47 +1,22 @@
 const mysql = require("mysql");
 
-const pool = mysql.createConnection({
+// Real pool — `mysql.createConnection` silently ignored `connectionLimit`,
+// and on a fatal error every consumer kept a reference to the dead connection
+// (the reconnect function built a new one but couldn't update the module export),
+// so every subsequent query failed with "Cannot enqueue Query after fatal error".
+// A pool transparently re-dials, so no manual reconnect dance is needed.
+const pool = mysql.createPool({
     connectionLimit: 10,
-    user: "cs3099user15",
-    host: "68.183.38.239",
-    database: "cs3099user15_PuzzleFlix",
-    password: "y!pqA34S8sgEJy",
-    port: 3306,
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: Number(process.env.DB_PORT) || 3306,
     waitForConnections: true,
-    timeout: 60000
 });
 
-// Any fatal error on the connection used to `throw`, which crashed the
-// process. Log instead, and reconnect when the error is fatal/connection-level.
-function handleDisconnect(conn) {
-    conn.on('error', function (error) {
-        console.error('Database connection error:', error.code || error.message);
-        if (error.fatal || error.code === 'PROTOCOL_CONNECTION_LOST' || error.code === 'ECONNRESET') {
-            reconnect(conn);
-        }
-    });
-}
-
-function reconnect(conn) {
-    console.error('Reconnecting to database...');
-    const fresh = mysql.createConnection(conn.config);
-    handleDisconnect(fresh);
-    fresh.connect(function (error) {
-        if (error) {
-            console.error('Error when reconnecting:', error.code || error.message);
-            setTimeout(reconnect, 2000, fresh);
-        } else {
-            console.error('Reconnected to the database.');
-        }
-    });
-}
-
-handleDisconnect(pool);
-
-pool.connect(error => {
-    if (error) {
-        console.error('Error connecting to the database:', error.code || error.message);
-    }
+pool.on("error", (err) => {
+    console.error("MySQL pool error:", err.code || err.message);
 });
 
 module.exports = pool;
