@@ -86,19 +86,19 @@ const loginUser = (values, callback) => {
     pool.query(query, values, (err, res) => {
         if (err) {
             console.log("Username or password invalid!");
-            callback[(false, null)];
+            callback(false, null);
         } else if (res.length == 1) {
-            res = eval(JSON.parse(JSON.stringify(res)));
+            res = JSON.parse(JSON.stringify(res));
 
             // Exists
             let userData = res[0];
             console.table(res);
 
             userLoginTime([values[0], ""]);
-            callback[(true, userData)];
+            callback(true, userData);
         } else {
             console.log("Username or password invalid!");
-            callback[(false, null)];
+            callback(false, null);
         }
     });
 };
@@ -157,9 +157,9 @@ const getXP = (values, callback) => {
     pool.query(query, values, (err, res) => {
         if (res.length == 0) {
             console.log("User cannot be found!");
-            callback[(false, null)];
+            callback(false, null);
         } else {
-            res = eval(JSON.parse(JSON.stringify(res)));
+            res = JSON.parse(JSON.stringify(res));
             callback(res);
         }
     });
